@@ -34,41 +34,43 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hbase.tutorial.util.Statistics;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SaltingTutorial {
 	private static final int EMPTY_REGION_SIZE = 2360;
 	private static final Log LOG = LogFactory.getLog(SaltingTutorial.class);
-	private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-	private static final TableName TABLE_NAME = TableName.valueOf("test-table");
-	private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test-column-family");
-	private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("test-column-name");
-
-	@BeforeClass
-	public static void setupCluster() throws Exception {
-		UTIL.startMiniCluster(1);
-		byte[][] splits = new byte[][] { Bytes.toBytes("000000000000000000000000000000000"),
-				Bytes.toBytes("100000000000000000000000000000000"), Bytes.toBytes("200000000000000000000000000000000"),
-				Bytes.toBytes("300000000000000000000000000000000"), Bytes.toBytes("400000000000000000000000000000000"),
-				Bytes.toBytes("500000000000000000000000000000000"), Bytes.toBytes("600000000000000000000000000000000"),
-				Bytes.toBytes("700000000000000000000000000000000"), Bytes.toBytes("800000000000000000000000000000000"),
-				Bytes.toBytes("900000000000000000000000000000000") };
-
-		UTIL.createTable(TABLE_NAME, COLUMN_FAMILY, splits);
+	private TutorialFixture fixture = new TutorialFixture();
+	
+	@Before
+	public void setup() throws Exception {
+		byte[][] testTableSplits = new byte[][] { Bytes.toBytes("000000000000000000000000000000000"),
+			Bytes.toBytes("100000000000000000000000000000000"),
+			Bytes.toBytes("200000000000000000000000000000000"),
+			Bytes.toBytes("300000000000000000000000000000000"), 
+			Bytes.toBytes("400000000000000000000000000000000"),
+			Bytes.toBytes("500000000000000000000000000000000"),
+			Bytes.toBytes("600000000000000000000000000000000"),
+			Bytes.toBytes("700000000000000000000000000000000"),
+			Bytes.toBytes("800000000000000000000000000000000"),
+			Bytes.toBytes("900000000000000000000000000000000") };
+			
+		fixture.setupCluster(testTableSplits);
 	}
-
-	@AfterClass
-	public static void teardownCluster() throws Exception {
-		UTIL.shutdownMiniCluster();
+	
+	@After
+	public void tearDown() throws Exception {
+		fixture.teardownCluster();
 	}
+	
 
 	@Test
 	public void test_YourSaltingMethodImplementation() throws Exception {
-		Table table = findTestTable();
+		Table table = fixture.findTestTable();
 
 		insertTestData(table, LocalDateTime.now(), 1000);
 
@@ -80,7 +82,7 @@ public class SaltingTutorial {
 	}
 
 	private Statistics collectStatistics() {
-		List<HRegion> regions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+		List<HRegion> regions = fixture.getRegions();
 		List<Double> data = new ArrayList<>();
 
 		for (HRegion hRegion : regions) {
@@ -95,34 +97,26 @@ public class SaltingTutorial {
 		return new Statistics(dataListPrimitive);
 	}
 
-	private Table findTestTable() throws IOException {
-		Configuration conf = UTIL.getConfiguration();
-		ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-		Table table = conn.getTable(TABLE_NAME);
-		return table;
-	}
-
 	private void insertTestData(Table table, LocalDateTime localDateTime, int numberOfRows) throws IOException {
-		LOG.debug(String.format("Writing %s rows to table ", numberOfRows));
+		LOG.info(String.format("Writing %s rows to table ", numberOfRows));
 
 		for (int i = 0; i < numberOfRows; i++) {
 			localDateTime = localDateTime.plus(1, ChronoUnit.SECONDS);
 			String saltedKey = createKey(localDateTime);
-			System.out.println(saltedKey);
+			LOG.debug(saltedKey);
 			Put p = new Put(Bytes.toBytes(saltedKey));
-			p.addColumn(COLUMN_FAMILY, COLUMN_QUALIFIER, Bytes.toBytes("value1"));
+			p.addColumn(fixture.getColumnFamily(), fixture.getColumnQualifier(), Bytes.toBytes("value1"));
 			table.put(p);
 		}
 	}
 	
 	private String createKey(LocalDateTime key) {
-		return key.toString();
-//		return rightPadZeros(Math.abs(key.hashCode()) + "_" + key.toString(), 34);
+//		return key.toString();
+		return rightPadZeros(Math.abs(key.hashCode()) + "_" + key.toString(), 34);
 	}
 
 	public static String rightPadZeros(String str, int num) {
 		return String.format("%1$-" + num + "s", str).replace(' ', '0');
 	}
-	
-	
+
 }

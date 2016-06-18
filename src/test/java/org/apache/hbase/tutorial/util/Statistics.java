@@ -26,7 +26,7 @@ public class Statistics {
 		return temp / size;
 	}
 
-	double getStdDev() {
+	public double getStdDev() {
 		return Math.sqrt(getVariance());
 	}
 

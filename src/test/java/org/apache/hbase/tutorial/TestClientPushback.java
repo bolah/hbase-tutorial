@@ -85,23 +85,4 @@ public class TestClientPushback {
 		Result result = table.get(new Get(Bytes.toBytes("key")));
 		Assert.assertEquals(1, result.size());
 	}
-	
-	public void test_PutLotOfRowsWithSalting_Nohotspotting() throws Exception {
-		Configuration conf = UTIL.getConfiguration();
-
-		ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
-		conn.getStatisticsTracker().getStats(server)
-		Table table = conn.getTable(tableName);
-		HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-		// Region region = rs.getOnlineRegions(tableName).get(0);
-
-		LOG.debug("Writing some data to " + tableName);
-		// write some data
-		Put p = new Put(Bytes.toBytes("key"));
-		p.addColumn(family, qualifier, Bytes.toBytes("value1"));
-		table.put(p);
-
-		Result result = table.get(new Get(Bytes.toBytes("key")));
-		Assert.assertEquals(1, result.size());
-	}
 }
